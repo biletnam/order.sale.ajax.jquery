@@ -7,6 +7,12 @@ const SF_DIVPREFIX = ".orderform-";
 const SF_SCRIPTPOSTFIX = ".php";
 const SF_NOTREADY_HTML = "";
 
+/**
+ *	Эмулятор критических секций. 
+ *	Позволяет задать область кода, которая может выполняться 
+ *	только один раз в конкретный промежуток времени.
+ *	В данном коде предотвращает 'закликивание' формы.
+ */
 var critical = (function() {
 	var criticals = {};
 	var executed = [];
@@ -31,6 +37,16 @@ var critical = (function() {
 	}
 
 	return {
+		/**
+		 *	Определить критическую секцию.
+		 *	Внутри критической секции по окончании её выполнения 
+		 *	необходимо вызвать функцию endCritical(), которая 
+		 *	освободит id секции и позволит ей выполняться в дальнейшем.
+		 *	props: {
+		 *		id: String - Произвольный уникальный идентификатор секции
+		 *		criticalFunction: function(endCritical) - функция с участком критической секции
+		 *	}
+		 */
 		enterCritical: function(props) {
 			function endCritical() {
 				delete criticals[props.id];
@@ -48,6 +64,16 @@ var critical = (function() {
 				props.criticalFunction(endCritical);
 			}
 		},
+
+		/**
+		 *	Определить участок кода, который выполнится только один раз.
+		 *	В основном требуется в целях отладки, либо
+		 *	инициализации чего-либо.
+		 *	props: {
+		 *		id: String - Произвольный уникальный идентификатор секции
+		 *		criticalFunction: function(endCritical) - функция с участком критической секции
+		 *	}
+		 */
 		once: function(props) {
 			if (!validateArguments(props))
 				throw { message: "bad arguments" };
@@ -61,29 +87,35 @@ var critical = (function() {
 				executed.push(props.id);
 				props.criticalFunction();
 			}
-		},
-		test: function() {
-			console.log("criticals: " + criticals);
-			console.log("executed:" + executed);
 		}
 	}
 })();
 
-// Контроллер форм
-function FormController() {
+/**
+ *	Контроллер форм
+ *	props: Object - объект с параметрами
+ *	props.ajaxgate: String - url, на который будем отправлять запросы получения данных и вьюх
+ *	props.readyField: String - селектор поля, блокирующего случайное оформление заказа
+ *	props.orderDiv: String - селектор дива, в который будем помещать ошибки
+ */
+function FormController(props) {
 	// Для дебага.
-	this.name = "controller";
-	this.id = 0;
+	// this.name = "controller";
+	// this.id = 0;
+	props = props ? props : {};
+	// проверки вводимых данных нет, потому как по сути область использования данного класса определена
+	this.ajaxgate = props.ajaxgate ? props.ajaxgate : location.href;
+	this.selReadyField = props.readyField ? props.readyField : "#orderfield_READY";
+	this.selOrderDiv = props.orderDiv ? props.orderDiv : ".order-errors";
 
 	// Данные, полученные от последнего запроса
 	this.post = null;
 
 	// Имеющиеся формы
 	this.forms = [];
-	//this.autobuild = [];
 
 	// флаг изменения (защита от закликивания формы)
-	this.changed = false;
+	//this.changed = false;
 }
 
 // Сравнение данных
@@ -119,8 +151,8 @@ FormController.prototype.findForm = function(formName) {
 FormController.prototype.makeQuery = function(sForm) {
 	var arQueryString = [];
 	$.each($(sForm).find('input'), function() {
-		// в строку запроса должно быть записано только значение отмеченного радио
 		if(this.type == "radio") {
+			// в строку запроса должно быть записано только значение отмеченного радио
 			if($(this)[0].checked) {
 				arQueryString.push( $(this)[0].name + "=" + $(this)[0].value );
 			}
@@ -136,12 +168,6 @@ FormController.prototype.getData = function(handler) {
 	var self = this;
 	var query = self.makeQuery(FC_ORDERFORM);
 
-	/*console.log("sending data request...");
-	if(query.length > 500)
-		console.log(query.substr(0, 500) + "[...]");
-	else
-		console.log(query);*/
-
 	$.ajax({
 		url: FC_AJAXGATE,
 		type: "POST",
@@ -149,8 +175,6 @@ FormController.prototype.getData = function(handler) {
 		dataType: "json",
 		success: function(data) {
 			self.post = data;
-			//console.log("RECEIVED DATA:");
-			//console.log(data);
 			if(typeof(handler) == "function")
 				handler(data);
 		},
@@ -163,16 +187,21 @@ FormController.prototype.getData = function(handler) {
 
 // конструктор контроллера
 FormController.prototype.run = function(handler) {
-	console.log("controller constructed");
-	console.log(this);
-
 	if(typeof handler == "function")
 		handler();
 
 	this.refresh();
 };
 
-// "Движок" контроллера. Выполняет обновление всех форм, проверяя при этом их зависимости
+/**
+ *	Обновление всех форм.
+ *	В ранних версиях скрипта эта функция использовалась для полного
+ *	обновления всех форм с учётом проверки на зависимости.
+ *	В дальнейшем эта возможность показалась мне избыточной.
+ *	Функция же осталась для первоначального построения форм, которые
+ *	не зависят от других (параметр requires равен пустому массиву).
+ *	Возможно она окажется полезной при дальнейшей разработке.
+ */
 FormController.prototype.refresh = function() {
 	var self = this;
 
@@ -192,7 +221,6 @@ FormController.prototype.refresh = function() {
 			var form = self.forms[i];
 			if (checkDependencies(form)) {
 				if(form.isBuilt) {
-					console.log("Updating " + form.name);
 					form.update(form.requiredData(data));
 				}
 			}
@@ -200,8 +228,7 @@ FormController.prototype.refresh = function() {
 		for (var i = 0; i < self.forms.length; i++) {
 			var form = self.forms[i];
 			if (checkDependencies(form)){
-				if(!form.isBuilt){
-					console.log("Building " + form.name);
+				if(!form.isBuilt) {
 					form.loadView(form.requiredData(data));
 				}
 			} else {
@@ -212,20 +239,10 @@ FormController.prototype.refresh = function() {
 	});
 };
 
-// Построить одну конкретную форму (исключительно в целях отладки)
-FormController.prototype.buildOne = function(formName) {
-	var form = this.findForm(formName);
-	this.getData(function(data) {
-		form.build(form.requiredData(data));
-	});
-};
-
+// Обрабочик нажатия кнопки submit
 FormController.prototype.submitForm = function() {
 	var errors = [];
-	var query = this.makeQuery(FC_ORDERFORM);
-
-	// этот параметр обозначает непосредственно готовность офомить заказ
-	query += "&confirmorder=Y";
+	
 	for (var i = 0; i < this.forms.length; i++) {
 		var formErrors = this.forms[i].validate();
 		errors = errors.concat(formErrors);
@@ -237,16 +254,24 @@ FormController.prototype.submitForm = function() {
 		showErrors(errors);
 		return false;
 	} else {
+		// !ЗАВИСИМОСТЬ
+		/* поле, разрешающее серверу оформить заказ. 
+		В случае его отсутствия при получении данных AJAX-запросом 
+		битрикс может решить, что мы готовы оформить заказ */
+		$(this.selReadyField).val("ready");
+		var query = this.makeQuery(FC_ORDERFORM);
+		// эти параметры обозначают непосредственно готовность оформить заказ
+		query += "&confirmorder=Y&SUBMIT_FORM=Y";
 		$.ajax({
 			url: FC_AJAXGATE,
 			type: "POST",
-			data: query + "&SUBMIT_FORM=Y",
+			data: query,
 			dataType: "json",
 			success: function(data) {
-				console.log(data);
 				if (typeof data.redirect == "string") {
 					window.top.location = data.redirect;
 				} else if (data.error.length >= 1) {
+					$(this.selReadyField).val("");
 					showErrors(data.error);
 				}
 			},
@@ -258,22 +283,40 @@ FormController.prototype.submitForm = function() {
 	}
 
 	function showErrors(arErrors) {
-		$(".order-errors").removeClass("hidden");
+		window.scrollTo(0,0);
+		$(this.selErrorDiv).removeClass("hidden");
 		var sErrors = "";
 		for (var i = 0; i < arErrors.length; i++) {
 			sErrors += '<span class="order-error">' + (arErrors[i]) + '</span>';
 		}
-		$(".order-errors").html(sErrors);
+		$(this.selErrorDiv).html(sErrors);
 	}
 };
 
-// Класс формы
+/**
+ *	Класс формы
+ *	props: Object - объект с параметрами
+ *	Обязательные параметры:
+ *	props.name: String - уникальное имя формы
+ *	props.requires: Array - массив, в котором содержатся
+ *		имена форм, необходимых для построения данной
+ *	Необязательные парамерты:
+ *	props.requiredData: function(data) - функция, возвращающая
+ *		данные из общего потока, необходимые для построения формы.
+ *	props.onChange: function - обработчик изменения данных формы
+ *	props.onBuild: function - обработчик построения формы. В нём 
+ *		следует определить те элементы, которые могут вызвать onChange
+ *	props.update: function - обработчик обновления формы
+ *	props.validate: function - специфичная для данной формы функция валидации
+ */
 function StepForm(props) {
-	// состояние готовности формы
+	// состояния готовности формы
 	this.isReady = false;
 	this.isBuilt = false;
+
 	// ссылка на контроллер, для фидбека
 	this.controller = null;
+
 	// регекспы для полей формы
 	this._fieldRules = [];
 
@@ -297,7 +340,7 @@ function StepForm(props) {
 	else
 		this.requires = [];
 
-	// Function overriding
+	// Перегрузка функций
 	if(typeof props.requiredData == "function")
 		this.requiredData = props.requiredData;
 
@@ -317,34 +360,31 @@ function StepForm(props) {
 StepForm.prototype.ready = function() { this.isReady = true; };
 StepForm.prototype.notReady = function() { this.isReady = false; };
 
-// Грузит форму через ajax-gate, который просто инклюдит нужный скрипт. Результат его работы вставляется в нужный элемент. Инклюженый скрипт просто выполняет роль вьюшки для отправляемых данных.
+/**
+ *	Грузит форму через ajax-gate.php, который просто инклюдит нужный скрипт.
+ *	Результат его работы вставляется в нужный элемент. 
+ *	Подключаемый скрипт просто выполняет роль вьюшки для отправляемых данных.
+ */
 StepForm.prototype.loadView = function(data, handler) {
 	var self = this;
 
 	if(typeof(data) == "object")
 		sData = $.toJSON(data);
 
-	/*console.log("requesting view for " + self.name + "...");
-
-	if(sData.length > 500)
-		console.log(sData.substr(0, 500) + "[...]");
-	else
-		console.log(sData);*/
-
+	// на всякий случай
 	sData = encodeURI(sData);
 
 	$.ajax({
 		url: FC_AJAXGATE,
 		type: "POST",
-		data: "AJAX_QUERY=Y&LOAD_STEP=" + self.script + "&DATA=" + sData,
+		// Параметр AJAX_QUERY сообщает серверу о намерении получить данные, либо html для формы
+		data: "AJAX_QUERY=Y&LOAD_STEP=" + self.script + "&DATA=" + sData + "&SUBMIT_FORM=N",
 		dataType: "text",
 		success: function(html) {
 			$(self.div).html(html);
 			self.isBuilt = true;
-			console.log("f-" + self.name + ": built");
 			if(typeof self.onBuild == "function")
 				self.onBuild(data);
-			console.log(self.name + ".loadView: ajax success");
 		},
 		error: function(details) {
 			console.log(self.name + ".loadView: ajax error");
@@ -377,8 +417,7 @@ StepForm.prototype.destroy = function() {
 
 // Обработчик изменения формы
 StepForm.prototype.onChange = function() {
-	console.log("f-" + this.name + ": changed");
-	this.controller.refresh();
+	//this.controller.refresh();
 };
 
 // Фильтр данных, возвращающий только те, что требуются для конкретной формы
@@ -387,9 +426,7 @@ StepForm.prototype.requiredData = function(data) {
 };
 
 // Обработчик обновления по умолчанию
-StepForm.prototype.update = function() {
-	console.log(this.name + " updated");
-};
+StepForm.prototype.update = function() { };
 
 // Добавить регексп, фильтрующий значение поля
 StepForm.prototype.addFieldRule = function(props) {
@@ -407,13 +444,18 @@ StepForm.prototype.addFieldRule = function(props) {
 	return this;
 };
 
-// Просто по очереди проверяем заданные поля на соответствие их регулярным выражениям
+/**
+ *	Валидатор формы
+ *	Просто по очереди проверяем заданные поля на соответствие их регулярным выражениям
+ *	! Эта функция рассчитана на текстовые поля. Для других применяйте перегрузку.
+ */
 StepForm.prototype.validate = function() {
 	var errors = [];
 	console.log(this._fieldRules);
 	for (var i = 0; i < this._fieldRules.length; i++) {
 		var selector = "input[name=" + this._fieldRules[i].fieldname + "]";
-		if ($(selector).is(":hidden") && ($(selector).attr("type") !== "hidden"))
+		// если поле не видно для пользователя, то проверять его нет смысла.
+		if ( $(selector).parent().is(":hidden") )
 			continue;
 		var regexp = new RegExp(this._fieldRules[i].regexp);
 		var str = $(selector).val();
@@ -425,10 +467,6 @@ StepForm.prototype.validate = function() {
 
 var controller;
 
-function critical(section) {
-	console.log(arguments);
-}
-
 $(document).ready(function() {
 	controller = new FormController();
 
@@ -437,7 +475,7 @@ $(document).ready(function() {
 		name: "persontype",
 		requires: [],
 		requiredData: function(data) {
-			return data.PERSON_TYPE;
+			return { PERSON_TYPE: data.PERSON_TYPE };
 		}
 	});
 
@@ -467,7 +505,7 @@ $(document).ready(function() {
 			
 			var locationFields = [];
 
-			// Перебираем свойства и ищем локейшны
+			// Перебираем свойства и ищем города
 			for(var i in data.ORDER_PROP.USER_PROPS_N) {
 				// Имя объекта представляет из себя цифру
 				var property = data.ORDER_PROP.USER_PROPS_N[i];
@@ -475,21 +513,20 @@ $(document).ready(function() {
 					locationFields.push(property);
 			}
 
-			// Обрабатываем локейшны
+			// Обрабатываем города
 			for(var i = 0; i < locationFields.length; i++) {
 				var locationField = locationFields[i];
 				var variants = locationField.VARIANTS;
 				var autocomplete = [];
 				for(var j = 0; j < variants.length; j++) {
 					autocomplete[j] = {}
-					if(variants[j].CITY_NAME == null)
-						autocomplete[j].label = variants[j].COUNTRY_NAME;
-					else
+					if(variants[j].CITY_NAME !== null) {
 						autocomplete[j].label = variants[j].CITY_NAME;
-					autocomplete[j].value = variants[j].NAME;
+						autocomplete[j].value = variants[j].NAME;
+					}
 				}
 
-				// На сервер отправляется id локейшна. Поле со значением нужно только для удобного ввода.
+				// На сервер отправляется id города. Поле со значением нужно только для удобного ввода.
 				var idField = "#" + locationField.FIELD_ID;
 				var valueField = "#" + locationField.FIELD_ID + "_VAL";
 
@@ -564,11 +601,11 @@ $(document).ready(function() {
 		}
 	}).addFieldRule({
 		fieldname: "ORDER_PROP_2", // E-MAIL
-		regexp: "^[a-zA-Z0-9]+@[a-zA-Z0-9]{3,}\.[a-zA-Z0-9]{2,}$",
+		regexp: "^[a-zA-Z0-9_.-]+@[\\w\\W]+$", // weak regexp
 		message: "Некорректный e-mail адрес"
 	}).addFieldRule({
 		fieldname: "ORDER_PROP_3", // ADRESS
-		regexp: "^[0-9а-яА-Я.,\s]+$",
+		regexp: "^[0-9а-яА-Я.,\\s]+$",
 		message: "Введите адрес"
 	}).addFieldRule({
 		fieldname: "ORDER_PROP_4", // PHONE
@@ -710,9 +747,5 @@ $(document).ready(function() {
 
 // Обработчик кнопки субмит на форме
 function submitForm() {
-	//try {
-		controller.submitForm();
-	/*} catch(e) {
-		console.log(e);
-	}*/
+	controller.submitForm();
 }

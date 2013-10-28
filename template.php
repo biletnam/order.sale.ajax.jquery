@@ -2,9 +2,17 @@
 <? if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die(); ?>
 <? Utils::debugMode(); ?>
 <? //Utils::pvd($arResult); ?>
+
+<? if($_POST["AJAX_QUERY"] == "Y"): ?>
+	<? // AJAX-запрос. Очищаем весь вывод битрикса и включаем скрипт обработки AJAX-запроса. ?>
+	<? $APPLICATION->RestartBuffer(); ?>
+	<? include($_SERVER["DOCUMENT_ROOT"].$templateFolder."/ajax-gate.php"); ?>
+	<? die(); ?>
+<? endif; ?>
+
 <?
 	$confirm = false;
-	// Проверяем, авторизован ли пользователь
+		// Проверяем, авторизован ли пользователь
 	if(!$USER->IsAuthorized() && $arParams["ALLOW_AUTO_REGISTER"] == "N") {
 		// Utils::dmsg("not authorized");
 		// Пользователь не авторизован, и зарегистрировать его автоматически нельзя
@@ -43,31 +51,26 @@
 		}
 	}
 ?>
-<? if($isAjaxQuery): ?>
-	<? // AJAX-запрос. Очищаем весь вывод битрикса и включаем скрипт обработки AJAX-запроса. ?>
-	<? $APPLICATION->RestartBuffer(); ?>
-	<? include($_SERVER["DOCUMENT_ROOT"].$templateFolder."/ajax-gate.php"); ?>
-	<? die(); ?>
-<? elseif($confirm): ?>
+
+<? if ($confirm): ?>
 	<? include('confirm.php'); ?>
 <? else: ?>
-	<? // Обычный запрос страницы. Просто выводим форму. ?>
-
-	<div class="order-form order-errors hidden"></div>
 
 	<NOSCRIPT>
 		<div class="errortext">Для оформления заказа необходимо включить JavaScript. По-видимому, JavaScript либо не поддерживается браузером, либо отключен. Измените настройки браузера и затем <a href="">повторите попытку</a>.</div>
 	</NOSCRIPT>
 		
+		<div class="order-form order-errors hidden"></div>
+
 	<form action="" method="POST" name="ORDER_FORM" id="ORDER_FORM" class="theform">
 		<?=bitrix_sessid_post()?>
 
 		<div id="order_form_content">
-			<div class="orderform-persontype">person-type</div>
-			<div class="orderform-properties">props</div>
-			<div class="orderform-delivery">delivery</div>
-			<div class="orderform-paysystem">paysystem</div>
-			<div class="orderform-summary">summary</div>
+			<div class="orderform-persontype"></div>
+			<div class="orderform-properties"></div>
+			<div class="orderform-delivery"></div>
+			<div class="orderform-paysystem"></div>
+			<div class="orderform-summary"></div>
 		</div>
 
 		<input type="hidden" name="confirmorder" id="confirmorder" value="Y">
