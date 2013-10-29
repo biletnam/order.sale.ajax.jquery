@@ -18,10 +18,20 @@
 	border: 1px solid #d8d8d8;
 	background: #fdfdfd;
 	padding: 10px;
-	margin: 10px;
+	margin: 10px 0px;
 	box-shadow: 0 0 6px rgba(0,0,0,0.15);
 	color: #454545;
 	font-size: 12px;
+}
+
+.order-form h4 {
+	margin-top: 0px;
+	margin-bottom: 10px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid #d8d8d8;
+	font-size: 16px;
+	font-weight: normal;
+	color: #121212;
 }
 
 .order-form p {
@@ -37,11 +47,6 @@
 .order-form strong {
 	font-size: 12px;
 	font-weight: bold;
-}
-
-.order-form h4 {
-	font-size: 18px;
-	color: #121212;
 }
 
 .order-form ul {
@@ -68,17 +73,17 @@
 	margin-left: 20px;
 }
 
-.order-form table {
+.labelfield-table {
 	padding: 0px;
 	margin: 10px;
 }
 
-.order-form table tr {
+.labelfield-table tr {
 	padding: 0px;
 	margin: 0px;
 }
 
-.order-form table tr td {
+.labelfield-table tr td {
 	padding: 0px;
 	margin: 0px;
 }
@@ -91,4 +96,13 @@
 	display: block;
 	padding: 10px;
 	padding-top: 0px;
+}
+
+.table-summary {
+	width: 100%;
+	margin: 0px;
+}
+
+.table-summary tr {
+	border-bottom: 1px solid #eaeaea;
 }

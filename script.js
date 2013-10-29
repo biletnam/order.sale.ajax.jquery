@@ -106,7 +106,7 @@ function FormController(props) {
 	// проверки вводимых данных нет, потому как по сути область использования данного класса определена
 	this.ajaxgate = props.ajaxgate ? props.ajaxgate : location.href;
 	this.selReadyField = props.readyField ? props.readyField : "#orderfield_READY";
-	this.selOrderDiv = props.orderDiv ? props.orderDiv : ".order-errors";
+	this.selErrorDiv = props.errorDiv ? props.errorDiv : ".order-errors";
 
 	// Данные, полученные от последнего запроса
 	this.post = null;
@@ -241,6 +241,7 @@ FormController.prototype.refresh = function() {
 
 // Обрабочик нажатия кнопки submit
 FormController.prototype.submitForm = function() {
+	var self = this;
 	var errors = [];
 	
 	for (var i = 0; i < this.forms.length; i++) {
@@ -258,8 +259,8 @@ FormController.prototype.submitForm = function() {
 		/* поле, разрешающее серверу оформить заказ. 
 		В случае его отсутствия при получении данных AJAX-запросом 
 		битрикс может решить, что мы готовы оформить заказ */
-		$(this.selReadyField).val("ready");
-		var query = this.makeQuery(FC_ORDERFORM);
+		$(self.selReadyField).val("ready");
+		var query = self.makeQuery(FC_ORDERFORM);
 		// эти параметры обозначают непосредственно готовность оформить заказ
 		query += "&confirmorder=Y&SUBMIT_FORM=Y";
 		$.ajax({
@@ -271,7 +272,7 @@ FormController.prototype.submitForm = function() {
 				if (typeof data.redirect == "string") {
 					window.top.location = data.redirect;
 				} else if (data.error.length >= 1) {
-					$(this.selReadyField).val("");
+					$(self.selReadyField).val("");
 					showErrors(data.error);
 				}
 			},
@@ -284,12 +285,12 @@ FormController.prototype.submitForm = function() {
 
 	function showErrors(arErrors) {
 		window.scrollTo(0,0);
-		$(this.selErrorDiv).removeClass("hidden");
+		$(self.selErrorDiv).removeClass("hidden");
 		var sErrors = "";
 		for (var i = 0; i < arErrors.length; i++) {
 			sErrors += '<span class="order-error">' + (arErrors[i]) + '</span>';
 		}
-		$(this.selErrorDiv).html(sErrors);
+		$(self.selErrorDiv).html(sErrors);
 	}
 };
 
@@ -455,7 +456,7 @@ StepForm.prototype.validate = function() {
 	for (var i = 0; i < this._fieldRules.length; i++) {
 		var selector = "input[name=" + this._fieldRules[i].fieldname + "]";
 		// если поле не видно для пользователя, то проверять его нет смысла.
-		if ( $(selector).parent().is(":hidden") )
+		if ( $(selector).length == 0 || $(selector).parent().is(":hidden") )
 			continue;
 		var regexp = new RegExp(this._fieldRules[i].regexp);
 		var str = $(selector).val();
@@ -495,10 +496,6 @@ $(document).ready(function() {
 					if(source[i].CITY_NAME != null)
 						if(fieldValue == source[i].CITY_NAME.toLowerCase())
 							return source[i];
-
-					if(source[i].NAME != null)
-						if(fieldValue == source[i].NAME.toLowerCase())
-							return source[i];
 				}
 				return null;
 			}
@@ -530,22 +527,32 @@ $(document).ready(function() {
 				var idField = "#" + locationField.FIELD_ID;
 				var valueField = "#" + locationField.FIELD_ID + "_VAL";
 
-				$(valueField).autocomplete({
-					source: autocomplete
-				});
-
-				// Значимое поле
-				$(valueField).focusout(function(){
+				function upd() {
 					var trueLocation = findTrueLocation($(valueField).val(), variants);
 					if(trueLocation != null) {
 						$(valueField).val(trueLocation.NAME);
 						$(idField).val(trueLocation.ID);
+						self.ready();
+						self.onChange();
 					} else {
 						$(valueField).val("");
 						$(idField).val(0);
+						var f_delivery = self.controller.findForm("delivery");
+						var f_paysystem = self.controller.findForm("paysystem");
+						f_delivery.destroy();
+						f_paysystem.destroy();
 					}
-					self.ready();
-					self.onChange();
+				}
+
+				// Значимое поле
+				$(valueField).autocomplete({
+					source: autocomplete,
+					change: function(e, ui) {
+						upd();
+					},
+					select: function(e, ui) {
+						upd();
+					}
 				});
 			}
 

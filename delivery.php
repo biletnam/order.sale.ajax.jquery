@@ -6,6 +6,7 @@
 
 
 <div class="order-form">
+	<h4>Способ доставки</h4>
 	<ul class="deliveries">
 		<? foreach($deliveries as $deliveryId => $arDelivery): ?>
 			<? // Хз вот, почему именно меньше нуля. так в шаблоне было ?>

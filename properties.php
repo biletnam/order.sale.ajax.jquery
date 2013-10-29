@@ -5,9 +5,10 @@
 ?>
 <? Utils::debugMode(); ?>
 <div class="order-form">
+	<h4>Информация о покупателе</h4>
 	<table class="labelfield-table" cellpadding="0">
 		<? foreach($properties as $property): ?>
-			<? //Utils::pvd(Array($property["NAME"], $property["TYPE"])); ?>
+			<? //Utils::pvd($property); ?>
 			<tr class="hidden" id="row_<?=$property['CODE']?>">
 				<? // LABEL ?>
 				<td class="labelfield-name">
@@ -17,7 +18,11 @@
 				<? // FIELD ?>
 				<td class="labelfield-input">
 					<? if($property["TYPE"] == "TEXT"): ?>
-						<input id="orderfield_<?=$property['CODE']?>" type="text" class="orderfield-text" name="<?=$property["FIELD_NAME"]?>">
+						<? if($property["IS_EMAIL"] == "Y" && !is_null($USER->getEmail())): ?>
+							<input id="orderfield_<?=$property['CODE']?>" type="text" class="orderfield-text" name="<?=$property["FIELD_NAME"]?>" value="<?=$USER->getEmail();?>">
+						<? else: ?>
+							<input id="orderfield_<?=$property['CODE']?>" type="text" class="orderfield-text" name="<?=$property["FIELD_NAME"]?>">
+						<? endif; ?>
 					<? endif; ?>
 
 					<? if($property["TYPE"] == "LOCATION"): ?>

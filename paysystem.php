@@ -6,6 +6,7 @@
 <? $payfromaccount = $data["PAY_FROM_ACCOUNT"]; ?>
 
 <div class="order-form">
+	<h4>Способ оплаты</h4>
 	<ul class="paysystems">
 		<? if($payfromaccount == "Y"): ?>
 			<li>

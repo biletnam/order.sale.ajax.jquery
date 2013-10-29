@@ -13,41 +13,21 @@
 ?>
 <div class="order-form">
 	<h4><?=GetMessage("SOA_TEMPL_SUM_TITLE")?></h4>
-	<table>
+	<table class="table-summary">
 		<tr>
-			<th><?=GetMessage("SOA_TEMPL_SUM_NAME")?></th>
-			<th><?=GetMessage("SOA_TEMPL_SUM_PROPS")?></th>
-			<th><?=GetMessage("SOA_TEMPL_SUM_PRICE_TYPE")?></th>
-			<th><?=GetMessage("SOA_TEMPL_SUM_DISCOUNT")?></th>
-			<th><?=GetMessage("SOA_TEMPL_SUM_WEIGHT")?></th>
-			<th><?=GetMessage("SOA_TEMPL_SUM_QUANTITY")?></th>
-			<th><?=GetMessage("SOA_TEMPL_SUM_PRICE")?></th>
+			<th align="right"><?=GetMessage("SOA_TEMPL_SUM_NAME")?></th>
+			<th align="right"><?=GetMessage("SOA_TEMPL_SUM_QUANTITY")?></th>
+			<th align="right"><?=GetMessage("SOA_TEMPL_SUM_PRICE")?></th>
 		</tr>
 	
 		<? foreach($basketItems as $arBasketItems): ?>
 			<tr>
-				<td><?=$arBasketItems["NAME"]?></td>
-				<td>
-					<? foreach($arBasketItems["PROPS"] as $val): ?>
-						<? echo $val["NAME"].": ".$val["VALUE"].""; ?>
-					<? endforeach; ?>
-				</td>
-				<td><?=$arBasketItems["NOTES"]?></td>
-				<td><?=$arBasketItems["DISCOUNT_PRICE_PERCENT_FORMATED"]?></td>
-				<td><?=$arBasketItems["WEIGHT_FORMATED"]?></td>
-				<td><?=$arBasketItems["QUANTITY"]?></td>
+				<td align="right"><?=$arBasketItems["NAME"]?></td>
+				<td align="right"><?=$arBasketItems["QUANTITY"]?></td>
 				<td align="right"><?=$arBasketItems["PRICE_FORMATED"]?></td>
 			</tr>
 		<? endforeach; ?>
 	
-		<tr>
-			<td align="right"><b><?=GetMessage("SOA_TEMPL_SUM_WEIGHT_SUM")?></b></td>
-			<td align="right" colspan="6"><?=$orderWeightFormatted;?></td>
-		</tr>
-		<tr>
-			<td align="right"><b><?=GetMessage("SOA_TEMPL_SUM_SUMMARY")?></b></td>
-			<td align="right" colspan="6"><?=$orderPriceFormatted;?></td>
-		</tr>
 	
 		<? if(doubleval($discountPrice) > 0): ?>
 			<tr>
